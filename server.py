@@ -152,7 +152,8 @@ TEMPLATE = r"""<!DOCTYPE html>
   </footer>
 
 <script>
-const API = '/api/status';
+const BASE = window.location.pathname.replace(/\/+$/, '');
+const API = BASE + '/api/status';
 let lastExport = 0;
 
 function fmtAddr(a){return a? a.slice(0,8)+'…'+a.slice(-4): '---'}
