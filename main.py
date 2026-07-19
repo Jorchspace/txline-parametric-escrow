@@ -246,44 +246,9 @@ def main():
     if args.live:
         args.mode = "live"
 
+    loop_mode = args.loop
     rollover = args.rollover
     match_num = 1
-
-    run_engine(
-        mode=args.mode, home=args.home, away=args.away,
-        speed=args.speed, rollover=rollover, network=args.network,
-        match_id=args.match_id, api_token=args.api_token,
-        match_num=match_num,
-    )
-
-
-
-if __name__ == "__main__":
-    import time as _time
-
-    # First call: parse args normally
-    args = sys.argv[1:] if len(sys.argv) > 1 else []
-
-    # Parse known args manually for loop mode
-    loop_mode = "--loop" in args
-    live_mode = "--live" in args
-    mode = "live" if live_mode else "mock"
-    speed = 3.0
-    rollover = 15.0
-    home = "Argentina"
-    away = "Francia"
-    network = "devnet"
-
-    try: speed = float(args[args.index("--speed") + 1]) if "--speed" in args else 0.5
-    except (ValueError, IndexError): pass
-    try: rollover = float(args[args.index("--rollover") + 1]) if "--rollover" in args else 15.0
-    except (ValueError, IndexError): pass
-    try: home = args[args.index("--home") + 1] if "--home" in args else "Argentina"
-    except (ValueError, IndexError): pass
-    try: away = args[args.index("--away") + 1] if "--away" in args else "Francia"
-    except (ValueError, IndexError): pass
-    try: network = args[args.index("--network") + 1] if "--network" in args else "devnet"
-    except (ValueError, IndexError): pass
 
     TEAMS = [
         ("Argentina", "Francia"),
@@ -294,16 +259,15 @@ if __name__ == "__main__":
         ("México", "Croacia"),
     ]
 
-    match_num = 1
     while True:
+        h, a = args.home, args.away
         if loop_mode and match_num > 1:
             h, a = TEAMS[(match_num - 1) % len(TEAMS)]
-        else:
-            h, a = home, away
 
         rollover = run_engine(
-            mode=mode, home=h, away=a, speed=speed,
-            rollover=rollover, network=network,
+            mode=args.mode, home=h, away=a, speed=args.speed,
+            rollover=rollover, network=args.network,
+            match_id=args.match_id, api_token=args.api_token,
             match_num=match_num,
         )
 
@@ -312,4 +276,9 @@ if __name__ == "__main__":
 
         match_num += 1
         print(f"\n  ⏳  Next match in 10s...  (rollover: ${rollover:.2f})\n")
+        import time as _time
         _time.sleep(10)
+
+
+if __name__ == "__main__":
+    main()
