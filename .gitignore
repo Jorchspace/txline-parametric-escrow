@@ -6,4 +6,3 @@ __pycache__/
 data/
 node_modules/
 *.egg-info/
-data/

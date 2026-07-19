@@ -1,7 +1,8 @@
 # TxLINE Parametric Escrow — Docker Compose
 #
-# Two services sharing a volume so engine writes dashboard.json
-# and webserver reads it atomically.
+# Two services sharing a volume at /shared_data so engine writes
+# dashboard.json and webserver reads it atomically via absolute path.
+# Source code stays in the Docker image — never overridden by volumes.
 #
 # Usage:
 #   docker compose up --build -d       # start both
@@ -15,7 +16,7 @@ services:
     container_name: txline-engine
     command: python main.py --loop --speed 0.5
     volumes:
-      - dashboard_data:/app/data
+      - dashboard_data:/shared_data
     restart: unless-stopped
 
   webserver:
@@ -25,7 +26,7 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - dashboard_data:/app/data
+      - dashboard_data:/shared_data
     depends_on:
       - engine
     restart: unless-stopped
