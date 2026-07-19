@@ -14,6 +14,7 @@ Uso:
 
 import argparse
 import logging
+import sys
 
 from config import env
 from stream_listener import TxLineListener
