@@ -181,7 +181,7 @@ def run_engine(mode="mock", home="Argentina", away="Francia", speed=0.5,
 
     sol = SolanaMock()
     engine = BettingEngine(match_id=match_tag)
-    exporter = StateExporter("dashboard.json")
+    exporter = StateExporter()  # writes to /shared_data/dashboard.json
 
     print_subtitle("BALANCES INICIALES")
     sol.print_balances()
