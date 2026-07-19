@@ -1,0 +1,8 @@
+target/
+__pycache__/
+*.pyc
+*.wasm
+.DS_Store
+dashboard.json
+node_modules/
+*.egg-info/

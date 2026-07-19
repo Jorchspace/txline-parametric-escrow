@@ -1,0 +1,34 @@
+# TxLINE Parametric Escrow — Docker Compose
+#
+# Two services sharing a volume so engine writes dashboard.json
+# and webserver reads it atomically.
+#
+# Usage:
+#   docker compose up --build -d       # start both
+#   docker compose logs -f engine      # watch match stream
+#   docker compose logs -f webserver   # watch Flask access log
+#   curl http://localhost:5000/api/status
+
+services:
+  engine:
+    build: .
+    container_name: txline-engine
+    command: python main.py --mock --speed 0.5
+    volumes:
+      - dashboard_data:/app
+    restart: unless-stopped
+
+  webserver:
+    build: .
+    container_name: txline-webserver
+    command: python server.py
+    ports:
+      - "5000:5000"
+    volumes:
+      - dashboard_data:/app
+    depends_on:
+      - engine
+    restart: unless-stopped
+
+volumes:
+  dashboard_data:
