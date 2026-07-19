@@ -14,7 +14,7 @@ from flask import Flask, jsonify, render_template_string
 
 app = Flask(__name__)
 
-DASHBOARD_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dashboard.json")
+DASHBOARD_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "dashboard.json")
 
 # ---------------------------------------------------------------------------
 # Inline HTML template (single-file, no external deps except Tailwind CDN)

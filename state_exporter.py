@@ -49,8 +49,9 @@ class StateExporter:
         exporter.export(engine, sol, match_state)
     """
 
-    def __init__(self, path: str = "dashboard.json"):
+    def __init__(self, path: str = "data/dashboard.json"):
         self.path = os.path.abspath(path)
+        os.makedirs(os.path.dirname(self.path), exist_ok=True)
         self.export_count = 0
         self.last_export_ts: float = 0.0
 

@@ -15,7 +15,7 @@ services:
     container_name: txline-engine
     command: python main.py --loop --speed 0.5
     volumes:
-      - dashboard_data:/app
+      - dashboard_data:/app/data
     restart: unless-stopped
 
   webserver:
@@ -25,7 +25,7 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - dashboard_data:/app
+      - dashboard_data:/app/data
     depends_on:
       - engine
     restart: unless-stopped

@@ -3,6 +3,6 @@ __pycache__/
 *.pyc
 *.wasm
 .DS_Store
-dashboard.json
+data/
 node_modules/
 *.egg-info/
