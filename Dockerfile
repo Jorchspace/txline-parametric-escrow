@@ -17,4 +17,4 @@ EXPOSE 5000
 
 # Default: run the engine in mock mode
 # Override with CMD in docker-compose per service
-CMD ["python", "main.py", "--mock", "--speed", "0.5"]
+CMD ["python", "main.py", "--loop", "--speed", "0.5"]

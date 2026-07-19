@@ -13,7 +13,7 @@ services:
   engine:
     build: .
     container_name: txline-engine
-    command: python main.py --mock --speed 0.5
+    command: python main.py --loop --speed 0.5
     volumes:
       - dashboard_data:/app
     restart: unless-stopped

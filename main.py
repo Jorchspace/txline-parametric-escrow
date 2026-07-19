@@ -172,57 +172,34 @@ def resolve_and_print(engine: BettingEngine, sol: SolanaMock, event):
 # Entry point
 # ---------------------------------------------------------------------------
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="TxLINE Parametric Escrow — Motor de apuestas sobre SSE de TxLINE",
-    )
-    parser.add_argument(
-        "--mode", choices=["mock", "live"], default="mock",
-        help="Fuente de datos: mock (simulador local) o live (SSE real de TxLINE)",
-    )
-    parser.add_argument("--live", action="store_true", help="Modo live (alias de --mode live)")
-    parser.add_argument("--mock", action="store_true", help="Modo mock (default)")
-    parser.add_argument("--home", default="Argentina", help="Equipo local (modo mock)")
-    parser.add_argument("--away", default="Francia", help="Equipo visitante (modo mock)")
-    parser.add_argument("--speed", type=float, default=3.0, help="Segundos entre eventos (modo mock)")
-    parser.add_argument("--network", choices=["devnet", "mainnet"], default="devnet")
-    parser.add_argument("--match-id", help="Filtrar por match_id (modo live)")
-    parser.add_argument("--api-token", help="API token de TxLINE (o TXLINE_API_TOKEN env)")
-    parser.add_argument("--rollover", type=float, default=15.0, help="Rollover inicial acumulado")
-    args = parser.parse_args()
+def run_engine(mode="mock", home="Argentina", away="Francia", speed=0.5,
+               rollover=15.0, network="devnet", match_id=None, api_token=None,
+               match_num=1):
+    """Core engine execution — callable from CLI or loop."""
 
-    # Resolver modo
-    if args.live:
-        args.mode = "live"
-    elif args.mock:
-        args.mode = "mock"
+    match_tag = f"TXL-WC-{match_num:03d}"
+    print_header(f"🎯 TxLINE PARAMETRIC ESCROW — Match #{match_num}")
 
-    # ── Init ────────────────────────────────────────────────────
-    print_header("🎯 TxLINE PARAMETRIC ESCROW — Demo Copa del Mundo")
     sol = SolanaMock()
-    engine = BettingEngine(match_id="TXL-WC-001")
-
-    # State exporter — escribe dashboard.json en cada evento
+    engine = BettingEngine(match_id=match_tag)
     exporter = StateExporter("dashboard.json")
 
     print_subtitle("BALANCES INICIALES")
     sol.print_balances()
 
-    # ── Fases 1+2: Apuestas ─────────────────────────────────────
-    build_phase_1_and_2(sol, engine, rollover_in=args.rollover)
+    # Fases 1+2: Apuestas
+    build_phase_1_and_2(sol, engine, rollover_in=rollover)
 
-    # Export: estado UPCOMING (apuestas cerradas, partido no iniciado)
+    # Export UPCOMING
     exporter.export(engine, sol, listener=None, system_status="UPCOMING")
     print(f"\n  📊 Estado exportado → {exporter.path}  (UPCOMING)\n")
 
-    # ── Fase 3: Stream ──────────────────────────────────────────
+    # Fase 3: Stream
     listener = TxLineListener()
 
-    # Callback en cada gol: re-exporta estado LIVE
     def on_goal(event):
         exporter.export(engine, sol, listener=listener, system_status="LIVE")
 
-    # Callback al finalizar: resuelve + exporta estado FINISHED
     def on_finish(event):
         resolve_and_print(engine, sol, event)
         path = exporter.export(engine, sol, listener=listener, system_status="FINISHED")
@@ -231,21 +208,108 @@ def main():
     listener.on_goal(on_goal)
     listener.on_finish(on_finish)
 
-    if args.mode == "live":
+    if mode == "live":
         print_header("📡 FASE 3: STREAM TxLINE — Partido en Vivo (LIVE)")
         listener.listen_live(
-            api_token=args.api_token,
-            network=args.network,
-            match_id=args.match_id,
+            api_token=api_token,
+            network=network,
+            match_id=match_id,
         )
     else:
         print_header("📡 FASE 3: STREAM TxLINE — Partido en Vivo (MOCK)")
-        listener.listen_mock(
-            home=args.home,
-            away=args.away,
-            speed=args.speed,
-        )
+        listener.listen_mock(home=home, away=away, speed=speed)
+
+    # Return next rollover for chaining
+    if engine.m1_pool and engine.m1_pool.resolved:
+        return engine.m1_pool.rollover_balance
+    return 0.0
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="TxLINE Parametric Escrow — Motor de apuestas sobre SSE de TxLINE",
+    )
+    parser.add_argument("--mode", choices=["mock", "live"], default="mock")
+    parser.add_argument("--live", action="store_true")
+    parser.add_argument("--mock", action="store_true")
+    parser.add_argument("--home", default="Argentina")
+    parser.add_argument("--away", default="Francia")
+    parser.add_argument("--speed", type=float, default=3.0)
+    parser.add_argument("--network", choices=["devnet", "mainnet"], default="devnet")
+    parser.add_argument("--match-id")
+    parser.add_argument("--api-token")
+    parser.add_argument("--rollover", type=float, default=15.0)
+    parser.add_argument("--loop", action="store_true",
+                        help="Continuous mode: replay matches forever (for 24/7 dashboard)")
+    args = parser.parse_args()
+
+    if args.live:
+        args.mode = "live"
+
+    rollover = args.rollover
+    match_num = 1
+
+    run_engine(
+        mode=args.mode, home=args.home, away=args.away,
+        speed=args.speed, rollover=rollover, network=args.network,
+        match_id=args.match_id, api_token=args.api_token,
+        match_num=match_num,
+    )
+
 
 
 if __name__ == "__main__":
-    main()
+    import time as _time
+
+    # First call: parse args normally
+    args = sys.argv[1:] if len(sys.argv) > 1 else []
+
+    # Parse known args manually for loop mode
+    loop_mode = "--loop" in args
+    live_mode = "--live" in args
+    mode = "live" if live_mode else "mock"
+    speed = 3.0
+    rollover = 15.0
+    home = "Argentina"
+    away = "Francia"
+    network = "devnet"
+
+    try: speed = float(args[args.index("--speed") + 1]) if "--speed" in args else 0.5
+    except (ValueError, IndexError): pass
+    try: rollover = float(args[args.index("--rollover") + 1]) if "--rollover" in args else 15.0
+    except (ValueError, IndexError): pass
+    try: home = args[args.index("--home") + 1] if "--home" in args else "Argentina"
+    except (ValueError, IndexError): pass
+    try: away = args[args.index("--away") + 1] if "--away" in args else "Francia"
+    except (ValueError, IndexError): pass
+    try: network = args[args.index("--network") + 1] if "--network" in args else "devnet"
+    except (ValueError, IndexError): pass
+
+    TEAMS = [
+        ("Argentina", "Francia"),
+        ("Brasil", "Alemania"),
+        ("Inglaterra", "España"),
+        ("Uruguay", "Portugal"),
+        ("Colombia", "Países Bajos"),
+        ("México", "Croacia"),
+    ]
+
+    match_num = 1
+    while True:
+        if loop_mode and match_num > 1:
+            h, a = TEAMS[(match_num - 1) % len(TEAMS)]
+        else:
+            h, a = home, away
+
+        rollover = run_engine(
+            mode=mode, home=h, away=a, speed=speed,
+            rollover=rollover, network=network,
+            match_num=match_num,
+        )
+
+        if not loop_mode:
+            break
+
+        match_num += 1
+        print(f"\n  ⏳  Next match in 10s...  (rollover: ${rollover:.2f})\n")
+        _time.sleep(10)
